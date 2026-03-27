@@ -1,4 +1,4 @@
-const CACHE_NAME = 'cyber-tracker-v2';
+const CACHE_NAME = 'cyber-tracker-v3';
 const urlsToCache = [
   './',
   './index.html',
@@ -23,9 +23,21 @@ self.addEventListener('activate', event => {
 });
 
 self.addEventListener('fetch', event => {
-  // http/httpsのみキャッシュ対象にする
+  // http/httpsのみ対象
   if (!event.request.url.startsWith('http')) return;
+
   event.respondWith(
-    caches.match(event.request).then(response => response || fetch(event.request))
+    // ネットワーク優先：まずサーバーから取得して最新を返す
+    fetch(event.request)
+      .then(response => {
+        // 取得成功したらキャッシュにも保存して返す
+        const clone = response.clone();
+        caches.open(CACHE_NAME).then(cache => cache.put(event.request, clone));
+        return response;
+      })
+      .catch(() => {
+        // オフライン時だけキャッシュから返す
+        return caches.match(event.request);
+      })
   );
 });
