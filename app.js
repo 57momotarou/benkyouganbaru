@@ -82,6 +82,7 @@ function getCompletedLessons(subjectId) {
 }
 
 function toggleLesson(subjectId, lessonNum) {
+  if (!progress[subjectId]) progress[subjectId] = { completedLessons: 0 };
   const p = progress[subjectId];
   const current = p.completedLessons;
   if (lessonNum === current + 1) {
