@@ -108,36 +108,37 @@
   </div>
 
   <script src="./data/schedule.js"></script>
- <script src="https://cdn.jsdelivr.net/npm/qrcode/build/qrcode.min.js"></script>
-    let qrInstance = null;
-
+  <script src="https://cdn.jsdelivr.net/npm/qrcode/build/qrcode.min.js"></script>
+  <script>
     function generateURL() {
       const data = {
         subjects: SUBJECTS,
         weeklyPlan: WEEKLY_PLAN
       };
       const json = JSON.stringify(data);
-      const encoded = btoa(encodeURIComponent(json));
+      // 日本語を含む文字列を安全にBase64エンコード
+      const encoded = btoa(unescape(encodeURIComponent(json)));
       const baseURL = 'https://57momotarou.github.io/benkyouganbaru/';
       return `${baseURL}?data=${encoded}`;
     }
 
-function regenerate() {
-  const url = generateURL();
-  document.getElementById('url-display').textContent = url;
+    function regenerate() {
+      const url = generateURL();
+      document.getElementById('url-display').textContent = url;
 
-  const qrDiv = document.getElementById('qrcode');
-  qrDiv.innerHTML = '<canvas id="qr-canvas"></canvas>';
+      const qrDiv = document.getElementById('qrcode');
+      qrDiv.innerHTML = '<canvas id="qr-canvas"></canvas>';
 
-  QRCode.toCanvas(
-    document.getElementById('qr-canvas'),
-    url,
-    { width: 220, margin: 2 },
-    function(error) {
-      if (error) console.error(error);
+      QRCode.toCanvas(
+        document.getElementById('qr-canvas'),
+        url,
+        { width: 220, margin: 2 },
+        function(error) {
+          if (error) console.error(error);
+        }
+      );
     }
-  );
-}
+
     // 自動生成
     window.onload = () => regenerate();
   </script>

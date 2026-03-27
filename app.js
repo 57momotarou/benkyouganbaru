@@ -47,7 +47,8 @@ function loadFromURL() {
   const data = params.get('data');
   if (!data) return;
   try {
-    const json = decodeURIComponent(atob(data));
+    // setup.htmlでbtoa(unescape(encodeURIComponent()))したものを安全にデコード
+    const json = decodeURIComponent(escape(atob(data)));
     const parsed = JSON.parse(json);
     localStorage.setItem('cyber-tracker-subjects', JSON.stringify(parsed.subjects));
     localStorage.setItem('cyber-tracker-weekly', JSON.stringify(parsed.weeklyPlan));
@@ -55,6 +56,7 @@ function loadFromURL() {
     alert('✅ 科目データを保存しました！');
   } catch(e) {
     console.error('データの読み込みに失敗しました', e);
+    alert('❌ データの読み込みに失敗しました。QRコードを再生成してもう一度試してください。');
   }
 }
 
