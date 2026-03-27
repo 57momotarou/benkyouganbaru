@@ -5,7 +5,21 @@ document.addEventListener('DOMContentLoaded', () => {
   initApp();
 });
 
+// localStorageから科目データを読み込む
+// なければ data/schedule.js のデータを使う（PC環境用）
+function getSubjects() {
+  const saved = localStorage.getItem('cyber-tracker-subjects');
+  return saved ? JSON.parse(saved) : (typeof SUBJECTS !== 'undefined' ? SUBJECTS : []);
+}
+
+function getWeeklyPlan() {
+  const saved = localStorage.getItem('cyber-tracker-weekly');
+  return saved ? JSON.parse(saved) : (typeof WEEKLY_PLAN !== 'undefined' ? WEEKLY_PLAN : []);
+}
+
 function initApp() {
+  // URLパラメータからデータを読み込む（iPhone初回セットアップ用）
+  loadFromURL();
   loadProgress();
   renderHeader();
   renderToday();
@@ -14,6 +28,23 @@ function initApp() {
   renderSemester();
   setupNav();
   registerSW();
+}
+
+function loadFromURL() {
+  const params = new URLSearchParams(window.location.search);
+  const data = params.get('data');
+  if (!data) return;
+  try {
+    const json = decodeURIComponent(atob(data));
+    const parsed = JSON.parse(json);
+    localStorage.setItem('cyber-tracker-subjects', JSON.stringify(parsed.subjects));
+    localStorage.setItem('cyber-tracker-weekly', JSON.stringify(parsed.weeklyPlan));
+    // URLパラメータを消してリダイレクト
+    window.history.replaceState({}, '', './index.html');
+    alert('✅ 科目データを保存しました！');
+  } catch(e) {
+    console.error('データの読み込みに失敗しました', e);
+  }
 }
 
 // ==========================================
