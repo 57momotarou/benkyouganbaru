@@ -45,7 +45,18 @@ function saveState() {
 }
 
 function registerSW() {
-  if ('serviceWorker' in navigator) navigator.serviceWorker.register('./sw.js');
+  if (!('serviceWorker' in navigator)) return;
+  navigator.serviceWorker.register('./sw.js').then(reg => {
+    // 新しいSWがインストールされたら自動でページをリロード
+    reg.addEventListener('updatefound', () => {
+      const newWorker = reg.installing;
+      newWorker.addEventListener('statechange', () => {
+        if (newWorker.state === 'activated') {
+          window.location.reload();
+        }
+      });
+    });
+  });
 }
 
 // ============================================================

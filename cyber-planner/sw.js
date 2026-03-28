@@ -1,8 +1,13 @@
+// バージョンを上げるたびに古いキャッシュが自動削除されます
+// デプロイ時に v1 → v2 → v3 ... と番号を増やしてください
 const CACHE = 'cyber-planner-v1';
-const FILES = ['./', './index.html', './style.css', './app.js', './data.js'];
+const FILES = ['./', './index.html', './style.css', './app.js', './data.js', './manifest.json'];
 
 self.addEventListener('install', e => {
-  e.waitUntil(caches.open(CACHE).then(c => c.addAll(FILES)));
+  e.waitUntil(
+    caches.open(CACHE).then(c => c.addAll(FILES))
+  );
+  // 旧バージョンのSWを即座に置き換える
   self.skipWaiting();
 });
 
