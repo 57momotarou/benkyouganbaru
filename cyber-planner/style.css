@@ -34,7 +34,7 @@ body {
   background: var(--bg);
   color: var(--text);
   min-height: 100vh;
-  padding-bottom: calc(var(--nav-h) + env(safe-area-inset-bottom));
+  padding-bottom: calc(var(--nav-h) + env(safe-area-inset-bottom) + 12px);
   padding-top: var(--header-h);
   -webkit-font-smoothing: antialiased;
 }
@@ -288,7 +288,7 @@ body {
 
 /* 科目ページは学期タブの高さ分だけ追加でパディング */
 #page-subjects {
-  padding-top: 52px;
+  padding-top: 72px;
 }
 
 .sem-tab {
