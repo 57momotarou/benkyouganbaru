@@ -34,6 +34,8 @@ function renderToday() {
 
 // ============================================================
 // 学事アラート
+// start（開始日）と date（終了日）に対応
+// 状態：開始前 / 期間中 / 終了
 // ============================================================
 function renderExamAlerts(sem) {
   const el = document.getElementById('today-exam-alerts');
@@ -44,25 +46,52 @@ function renderExamAlerts(sem) {
 
   const alerts = [];
   (sem.exams||[]).forEach(exam => {
-    const d = new Date(exam.date); d.setHours(23,59,59);
-    const days = Math.ceil((d-now)/86400000);
-    if (days>=-3 && days<=14) alerts.push({label:exam.label, days, isPast:days<0, isUrgent:days<=3});
+    const end        = new Date(exam.date); end.setHours(23,59,59);
+    const start      = exam.start ? new Date(exam.start) : end;
+    const daysToEnd  = Math.ceil((end   - now) / 86400000);
+    const daysToStart= Math.ceil((start - now) / 86400000);
+    const isActive   = now >= start && now <= end;  // 期間中
+    const isPast     = now > end;                   // 終了
+    const isUpcoming = !isPast && !isActive;        // 開始前
+    // 表示条件：終了3日後まで、または開始14日前から
+    if (daysToEnd < -3) return;
+    if (isUpcoming && daysToStart > 14) return;
+    alerts.push({ label: exam.label, daysToEnd, daysToStart, isPast, isActive, isUpcoming });
   });
   if (sem.seiseki) {
     const d = new Date(sem.seiseki);
     const days = Math.ceil((d-now)/86400000);
-    if (days>=-3 && days<=14) alerts.push({label:'成績発表', days, isPast:days<0, isSeiseki:true});
+    if (days>=-3 && days<=14) alerts.push({label:'成績発表', daysToEnd:days, isPast:days<0, isSeiseki:true});
   }
-  alerts.forEach(({label,days,isPast,isUrgent,isSeiseki}) => {
-    const icon  = isSeiseki?'📊':'📝';
-    const bg    = isPast?'var(--bg3)':isUrgent?'var(--red-dim)':'var(--amber-dim)';
-    const bd    = isPast?'var(--border)':isUrgent?'var(--red)':'var(--amber)';
-    const color = isPast?'var(--text3)':isUrgent?'var(--red)':'var(--amber)';
-    const txt   = isPast?`${Math.abs(days)}日前に終了`:days===0?'今日が締切！':days===1?'明日が締切！':`あと${days}日`;
+  alerts.forEach(({label, daysToEnd, daysToStart, isPast, isActive, isUpcoming, isSeiseki}) => {
+    const icon = isSeiseki ? '📊' : '📝';
+    let bg, bd, color, txt, sub;
+    if (isPast) {
+      bg='var(--bg3)'; bd='var(--border)'; color='var(--text3)';
+      txt=`${Math.abs(daysToEnd)}日前に終了`; sub='終了';
+    } else if (isActive) {
+      bg='var(--amber-dim)'; bd='var(--amber)'; color='var(--amber)';
+      txt=daysToEnd===0?'今日が締切！':`締切まであと${daysToEnd}日`;
+      sub='📖 期末試験期間中';
+    } else {
+      // 開始前
+      const urgent = daysToStart <= 3;
+      bg=urgent?'var(--red-dim)':'var(--bg3)';
+      bd=urgent?'var(--red)':'var(--border)';
+      color=urgent?'var(--red)':'var(--text3)';
+      txt=daysToStart===0?'今日から開始！':`あと${daysToStart}日で開始`;
+      sub='期末試験開始前';
+    }
+    if (isSeiseki) {
+      bg='var(--bg3)'; bd='var(--border)';
+      color=daysToEnd>=0?'var(--amber)':'var(--text3)';
+      txt=daysToEnd<0?`${Math.abs(daysToEnd)}日後`:`あと${daysToEnd}日`;
+      sub='';
+    }
     el.innerHTML += `<div style="display:flex;align-items:center;gap:10px;padding:10px 12px;border-radius:8px;background:${bg};border:1px solid ${bd};margin-bottom:8px">
       <span style="font-size:18px">${icon}</span>
       <div style="flex:1"><div style="font-size:13px;font-weight:700;color:${color}">${label}</div>
-      <div style="font-size:11px;color:var(--text3)">${isPast?'終了':'期末試験期間'}</div></div>
+      <div style="font-size:11px;color:var(--text3)">${sub}</div></div>
       <span style="font-size:11px;font-weight:700;color:${color};flex-shrink:0">${txt}</span></div>`;
   });
 }

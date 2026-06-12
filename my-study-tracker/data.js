@@ -386,9 +386,11 @@ const ATTENDANCE_2026_SPRING = {
 const SEMESTERS = [
   { id: 1, name: '2026年度春学期', year: 2026, season: '春', start: '2026-04-03', end: '2026-08-06', attendance: ATTENDANCE_2026_SPRING,
     exams: [
-      { label: 'スタディスキル入門 期末', date: '2026-05-27' },
-      { label: '教養前期科目 期末', date: '2026-06-16' },
-      { label: '専門・外国語・教養後期 期末', date: '2026-08-06' },
+      { label: 'スタディスキル入門 期末', start: '2026-04-02', date: '2026-06-02' },
+      { label: 'AI入門・心理学入門 期末', start: '2026-04-03', date: '2026-06-16' },
+      { label: '基礎英語Ⅰ 期末', start: '2026-04-03', date: '2026-08-04' },
+      { label: '専門・外国語・教養後期 期末', start: '2026-04-03', date: '2026-08-06' },
+      { label: 'Webデザイン・写真映像・ゲームの歴史 期末', start: '2026-05-26', date: '2026-08-04' },
     ], seiseki: '2026-09-01' },
   { id: 2, name: '2026年度秋学期', year: 2026, season: '秋', start: '2026-10-01', end: '2027-02-06',
     exams: [
