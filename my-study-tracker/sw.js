@@ -1,38 +1,90 @@
-// ★ デプロイのたびにここのバージョンを上げてください (v1 → v2 → v3 ...)
-const CACHE = 'my-study-tracker-v60';
-const FILES = ['./', './index.html', './style.css', './app.js', './data.js', './manifest.json',
-  './attendance.js', './render-today.js', './render-today-timetable.js', './render-today-cards.js', './render-settings.js', './render-schedule.js',
-  './render-badges.js', './render-progress.js', './render-deadlines.js'];
+const CACHE_PREFIX = 'my-study-tracker-';
+const CACHE = `${CACHE_PREFIX}v61`;
+const APP_SHELL = [
+  './',
+  './index.html',
+  './style.css',
+  './app.js',
+  './data.js',
+  './manifest.json',
+  './icon.svg',
+  './icon-192.png',
+  './icon-512.png',
+  './attendance.js',
+  './render-today.js',
+  './render-today-timetable.js',
+  './render-today-cards.js',
+  './render-settings.js',
+  './render-schedule.js',
+  './render-badges.js',
+  './render-progress.js',
+  './render-deadlines.js',
+];
 
-self.addEventListener('install', e => {
-  e.waitUntil(
-    caches.open(CACHE).then(c => c.addAll(FILES))
+self.addEventListener('install', event => {
+  event.waitUntil(
+    caches.open(CACHE)
+      .then(cache => cache.addAll(APP_SHELL))
+      .then(() => self.skipWaiting())
   );
-  self.skipWaiting();
 });
 
-self.addEventListener('activate', e => {
-  e.waitUntil(
+self.addEventListener('activate', event => {
+  event.waitUntil(
     caches.keys()
-      .then(keys => Promise.all(keys.filter(k => k !== CACHE).map(k => caches.delete(k))))
+      .then(keys => Promise.all(
+        keys
+          .filter(key => key.startsWith(CACHE_PREFIX) && key !== CACHE)
+          .map(key => caches.delete(key))
+      ))
       .then(() => self.clients.claim())
-      .then(() => {
-        return self.clients.matchAll({ type: 'window' }).then(clients => {
-          clients.forEach(client => client.postMessage('RELOAD'));
-        });
-      })
   );
 });
 
-self.addEventListener('fetch', e => {
-  if (!e.request.url.startsWith('http')) return;
-  e.respondWith(
-    fetch(e.request)
-      .then(res => {
-        const clone = res.clone();
-        caches.open(CACHE).then(c => c.put(e.request, clone));
-        return res;
-      })
-      .catch(() => caches.match(e.request))
-  );
+self.addEventListener('fetch', event => {
+  if (event.request.method !== 'GET') return;
+
+  if (event.request.mode === 'navigate') {
+    event.respondWith(networkFirst(event.request, './index.html'));
+    return;
+  }
+
+  event.respondWith(cacheFirst(event.request));
 });
+
+async function networkFirst(request, fallbackUrl) {
+  try {
+    const response = await fetch(request);
+    if (isCacheable(response)) await putInCache(request, response.clone());
+    return response;
+  } catch (error) {
+    const cached = await caches.match(request);
+    if (cached) return cached;
+    const fallback = await caches.match(fallbackUrl);
+    if (fallback) return fallback;
+    throw error;
+  }
+}
+
+async function cacheFirst(request) {
+  const cached = await caches.match(request);
+  if (cached) return cached;
+
+  const response = await fetch(request);
+  if (isCacheable(response)) await putInCache(request, response.clone());
+  return response;
+}
+
+async function putInCache(request, response) {
+  try {
+    const cache = await caches.open(CACHE);
+    await cache.put(request, response);
+  } catch (error) {
+    // キャッシュ容量不足でも、オンライン取得したレスポンスはそのまま返す。
+    console.warn('レスポンスをキャッシュできませんでした。', error);
+  }
+}
+
+function isCacheable(response) {
+  return response && (response.ok || response.type === 'opaque');
+}

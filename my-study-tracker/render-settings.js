@@ -60,34 +60,36 @@ function renderSettingsPage() {
   // カテゴリ/タイプでグループ化
   const groups = {};
   filtered.forEach(s => {
-    const key = `${s.category} / ${s.type}`;
+    const key = `${s.category} / ${s.type || s.category}`;
     if (!groups[key]) groups[key] = [];
     groups[key].push(s);
   });
 
   const listEl = document.getElementById('subject-list');
-  listEl.innerHTML = '';
+  let listHtml = '';
   Object.entries(groups).forEach(([groupName, subjects]) => {
-    listEl.innerHTML += `<div class="subject-group-title">${groupName}</div>`;
+    listHtml += `<div class="subject-group-title">${groupName}</div>`;
     subjects.forEach(s => {
       const isChecked = enrolled.includes(s.code);
       const color = getCategoryColor(s.category);
+      const subjectType = s.type || s.category;
       const openTag = s.open_type === '一斉'
         ? `<span style="font-size:10px;color:var(--blue);margin-left:4px;">○一斉</span>`
         : '';
-      listEl.innerHTML += `
+      listHtml += `
         <div class="subject-row ${isChecked ? 'checked' : ''}" data-code="${s.code}">
           <div class="subject-row-check" style="${isChecked ? `background:${color};border-color:${color}` : ''}">
             <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#000" stroke-width="3"><polyline points="20 6 9 17 4 12"/></svg>
           </div>
           <div class="subject-row-info">
             <div class="subject-row-name">${s.name}${openTag}</div>
-            <div class="subject-row-meta">${s.code} ・ ${s.type} ・ ${s.lessons}回</div>
+            <div class="subject-row-meta">${s.code} ・ ${subjectType} ・ ${s.lessons}回</div>
           </div>
           <div class="subject-row-credits">${s.credits}単位</div>
         </div>`;
     });
   });
+  listEl.innerHTML = listHtml || '<div class="empty-state"><div class="empty-state-text">表示できる科目がありません</div></div>';
 
   // チェックボックスのクリックイベント
   listEl.querySelectorAll('.subject-row').forEach(row => {
@@ -171,7 +173,10 @@ function renderOpenDateList(semId) {
   var subjects = getEnrolledSubjects(semId);
   var el       = document.getElementById('open-date-list');
   if (!el) return;
-  if (!subjects.length) { el.innerHTML=''; return; }
+  if (!subjects.length) {
+    el.innerHTML='<div style="font-size:12px;color:var(--text3);text-align:center;padding:8px">履修科目を選択すると表示されます</div>';
+    return;
+  }
   if (!sem.attendance)  { el.innerHTML='<div style="font-size:12px;color:var(--text3)">この学期の開講日データはありません</div>'; return; }
 
   // 各科目の開講日・締切を収集
@@ -183,33 +188,35 @@ function renderOpenDateList(semId) {
       var tbl = sem.attendance[key];
       // 開講日（コマ1のstart、または後期開講日）
       if (key === 'kyoyo_koki') {
-        openDate = new Date(typeof KYOYO_KOKI_START !== 'undefined' ? KYOYO_KOKI_START : '2026-05-26');
+        openDate = parseDateValue(typeof KYOYO_KOKI_START !== 'undefined' ? KYOYO_KOKI_START : '2026-05-26');
       } else if (tbl[1]) {
         var e1 = tbl[1];
-        if (typeof e1 === 'object' && e1.start) openDate = new Date(e1.start);
-        else openDate = new Date(sem.start);
+        if (typeof e1 === 'object' && e1.start) openDate = parseDateValue(e1.start);
+        else openDate = parseDateValue(sem.start);
       } else {
-        openDate = new Date(sem.start);
+        openDate = parseDateValue(sem.start);
       }
       // 最終締切（最後のコマ）
       var lastN = s.lessons;
       var last  = tbl[lastN];
-      if (last) closeDate = new Date(typeof last === 'string' ? last : last.end);
+      if (last) closeDate = parseDateValue(typeof last === 'string' ? last : last.end);
     } else {
-      openDate  = new Date(sem.start);
+      openDate  = parseDateValue(sem.start);
     }
 
     var now      = new Date();
-    var isOpen   = openDate && openDate <= now;
+    var isEnded  = Boolean(closeDate && closeDate < now);
+    var isOpen   = Boolean(openDate && openDate <= now && !isEnded);
     var color    = getCategoryColor(s.category);
     var openStr  = openDate  ? openDate.toLocaleDateString('ja-JP',{month:'numeric',day:'numeric'}) : '-';
     var closeStr = closeDate ? closeDate.toLocaleDateString('ja-JP',{month:'numeric',day:'numeric'}) : '-';
     var openType = s.open_type === '一斉' ? '一斉' : '順次';
 
-    return { s, color, isOpen, openStr, closeStr, openType };
+    var statusRank = isOpen ? 0 : isEnded ? 2 : 1;
+    return { s, color, isOpen, isEnded, statusRank, openStr, closeStr, openType, openTime: openDate ? openDate.getTime() : Infinity };
   }).sort(function(a,b){
-    if (a.isOpen !== b.isOpen) return a.isOpen ? -1 : 1;
-    return a.openStr.localeCompare(b.openStr);
+    if (a.statusRank !== b.statusRank) return a.statusRank - b.statusRank;
+    return a.openTime - b.openTime;
   });
 
   var html = '';
@@ -221,10 +228,12 @@ function renderOpenDateList(semId) {
 
   rows.forEach(function(row) {
     var bg    = row.isOpen ? 'transparent' : 'rgba(255,255,255,0.02)';
-    var op    = row.isOpen ? '1' : '0.5';
+    var op    = row.isOpen ? '1' : row.isEnded ? '0.65' : '0.5';
     var badge = row.isOpen
       ? '<span style="font-size:9px;background:var(--green-dim,rgba(16,185,129,0.15));color:var(--green);padding:1px 5px;border-radius:99px">開講中</span>'
-      : '<span style="font-size:9px;background:var(--bg3);color:var(--text3);padding:1px 5px;border-radius:99px">開講前</span>';
+      : row.isEnded
+        ? '<span style="font-size:9px;background:var(--bg3);color:var(--text3);padding:1px 5px;border-radius:99px">終了</span>'
+        : '<span style="font-size:9px;background:var(--bg3);color:var(--text3);padding:1px 5px;border-radius:99px">開講前</span>';
     html += '<div style="display:grid;grid-template-columns:1fr auto auto;gap:0;border-bottom:1px solid var(--border);background:'+bg+';opacity:'+op+'">';
     html += '<div style="padding:7px 6px;min-width:0">';
     html += '<div style="display:flex;align-items:center;gap:5px">';
@@ -270,7 +279,7 @@ function renderGraduationChecker(semId) {
   var requiredDone = 0, requiredMissing = [];
   REQUIRED_CODES.forEach(function(code) {
     if (allCodes.has(code)) { requiredDone++; }
-    else { var s=ALL_SUBJECTS.find(function(x){return x.code===code;}); if(s) requiredMissing.push(s); }
+    else { var s=SUBJECT_BY_CODE.get(code); if(s) requiredMissing.push(s); }
   });
 
   var totalEarned = (earned['専門']||0)+(earned['教養']||0)+(earned['外国語']||0);

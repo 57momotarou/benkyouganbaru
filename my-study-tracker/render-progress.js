@@ -15,6 +15,7 @@ function renderProgressPage() {
     btn.addEventListener('click', () => {
       state.currentSemesterId = sem.id;
       saveState();
+      renderHeader();
       renderProgressPage();
     });
     selectorEl.appendChild(btn);
@@ -24,7 +25,6 @@ function renderProgressPage() {
   const sem      = getCurrentSemester();
   const subjects = getEnrolledSubjects(semId);
   const listEl   = document.getElementById('progress-subject-list');
-  listEl.innerHTML = '';
 
   if (subjects.length === 0) {
     listEl.innerHTML = `<div class="card"><div class="empty-state"><div class="empty-state-icon">📭</div><div class="empty-state-text">この学期に登録された科目がありません</div><div class="empty-state-sub">「設定」タブで履修登録してください</div></div></div>`;
@@ -38,7 +38,7 @@ function renderProgressPage() {
   const pctAll    = totalLen>0?Math.round(doneLen/totalLen*100):0;
   const lateCount = subjects.filter(s=>Math.floor(getCompletedLessons(s.code)/CPL)<getTodayTarget(s,sem)).length;
 
-  listEl.innerHTML += `<div class="card">
+  let html = `<div class="card">
     <div style="display:flex;gap:10px;margin-bottom:10px">
       <div style="flex:1;background:var(--bg3);border-radius:10px;padding:12px;text-align:center">
         <div style="font-family:'Space Mono',monospace;font-size:22px;font-weight:700;color:var(--amber)">${pctAll}%</div>
@@ -59,6 +59,7 @@ function renderProgressPage() {
   // カテゴリ順に並べる（専門→教養→外国語）
   const catOrder = {'専門':0,'教養':1,'外国語':2};
   subjects.sort((a,b) => (catOrder[a.category]??9) - (catOrder[b.category]??9));
+  const now = new Date();
 
   let currentCat = null;
   subjects.forEach(s => {
@@ -66,7 +67,7 @@ function renderProgressPage() {
       currentCat = s.category;
       const catColor = getCategoryColor(s.category);
       const catLabel = s.category === '専門' ? '💻 専門科目' : s.category === '教養' ? '🌿 教養科目' : '🌐 外国語科目';
-      listEl.innerHTML += `<div style="font-size:11px;font-weight:700;color:${catColor};letter-spacing:1px;padding:8px 2px 4px;border-bottom:1px solid ${catColor}44;margin-bottom:8px">${catLabel}</div>`;
+      html += `<div style="font-size:11px;font-weight:700;color:${catColor};letter-spacing:1px;padding:8px 2px 4px;border-bottom:1px solid ${catColor}44;margin-bottom:8px">${catLabel}</div>`;
     }
 
     const doneLessons  = Math.floor(getCompletedLessons(s.code) / CPL);
@@ -82,9 +83,12 @@ function renderProgressPage() {
     let nextDlTag = '';
     if (nextLesson <= s.lessons) {
       const nextDl   = getLessonDeadline(nextLesson, s, sem);
-      const daysLeft = Math.ceil((nextDl - new Date()) / 86400000);
-      const dlColor  = daysLeft < 0 || daysLeft <= 3 ? 'var(--red)' : daysLeft <= 7 ? 'var(--amber)' : 'var(--text3)';
-      const dlLabel  = daysLeft < 0 ? `${Math.abs(daysLeft)}日超過` : `あと${daysLeft}日`;
+      const daysLeft = calendarDayDiff(nextDl, now);
+      const isPastDeadline = nextDl < now;
+      const dlColor  = isPastDeadline || daysLeft <= 3 ? 'var(--red)' : daysLeft <= 7 ? 'var(--amber)' : 'var(--text3)';
+      const dlLabel  = isPastDeadline
+        ? (daysLeft === 0 ? '本日超過' : `${Math.abs(daysLeft)}日超過`)
+        : (daysLeft === 0 ? '今日' : `あと${daysLeft}日`);
       nextDlTag = `<span style="font-size:10px;background:var(--bg3);border:1px solid var(--border);padding:1px 6px;border-radius:99px;color:${dlColor};margin-left:4px">📅 コマ${nextLesson} ${dlLabel}</span>`;
     }
 
@@ -103,6 +107,7 @@ function renderProgressPage() {
       const isNotYet  = !isLessonAvailable(lesson, s, sem);
       const noClick   = isNotYet ? 'pointer-events:none;' : '';
       const opacity   = isNotYet ? 'opacity:0.25;' : '';
+      const disabled  = isNotYet ? ' disabled aria-disabled="true"' : '';
 
       let btnStyle = '';
       if (isDone)        btnStyle = `background:${color};color:#000;border-color:${color}`;
@@ -110,13 +115,13 @@ function renderProgressPage() {
       else if (isTarget) btnStyle = 'background:var(--amber-dim);color:var(--amber);border:1px solid var(--amber)';
       else               btnStyle = 'background:var(--bg3);color:var(--text3);border:1px solid var(--border)';
 
-      btnHtml += `<button class="lesson-btn${isDone?' done':''}" onclick="toggleLesson('${s.code}',${lesson},${semId})" style="width:36px;height:36px;font-size:11px;${btnStyle}${noClick}${opacity}" title="コマ${lesson}">${lesson}</button>`;
+      btnHtml += `<button class="lesson-btn${isDone?' done':''}" onclick="toggleLesson('${s.code}',${lesson},${semId})" style="width:36px;height:36px;font-size:11px;${btnStyle}${noClick}${opacity}" title="コマ${lesson}" aria-label="${s.name} コマ${lesson}"${disabled}>${lesson}</button>`;
     }
     btnHtml += '</div></div>';
 
     const progressLabel = doneLessons > 0 ? `コマ${doneLessons}まで完了` : '未受講';
 
-    listEl.innerHTML += `
+    html += `
       <div class="progress-subject-card">
         <div class="ps-header">
           <div style="display:flex;flex-direction:column;gap:2px;flex:1;min-width:0">
@@ -142,6 +147,8 @@ function renderProgressPage() {
         </div>
       </div>`;
   });
+
+  listEl.innerHTML = html;
 
   // 完了済みの次のコマが左端に来るよう自動スクロール（1コマ=39px）
   const LESSON_W = 39;

@@ -17,13 +17,14 @@ function renderToday() {
 
   // 遅刻アラート
   const alertsEl = document.getElementById('today-alerts');
-  alertsEl.innerHTML = '';
+  const alertRows = [];
   subjects.forEach(s => {
     const done = Math.floor(getCompletedLessons(s.code)/CPL);
     const late = getTodayTarget(s,sem) - done;
-    if (late>=3)      alertsEl.innerHTML += `<div class="alert alert-danger">⚠️ <b>${s.name}</b> 遅刻${late}コマ！繰り越し優先で</div>`;
-    else if (late>=1) alertsEl.innerHTML += `<div class="alert alert-warn">📌 <b>${s.name}</b> ${late}コマ遅刻中 — 優先受講を</div>`;
+    if (late>=3)      alertRows.push(`<div class="alert alert-danger">⚠️ <b>${s.name}</b> 遅刻${late}コマ！繰り越し優先で</div>`);
+    else if (late>=1) alertRows.push(`<div class="alert alert-warn">📌 <b>${s.name}</b> ${late}コマ遅刻中 — 優先受講を</div>`);
   });
+  alertsEl.innerHTML = alertRows.join('');
 
   // TODAY 時間割カード
   renderTodayTimetable(subjects, sem, semId);
@@ -46,10 +47,10 @@ function renderExamAlerts(sem) {
 
   const alerts = [];
   (sem.exams||[]).forEach(exam => {
-    const end        = new Date(exam.date); end.setHours(23,59,59);
-    const start      = exam.start ? new Date(exam.start) : end;
-    const daysToEnd  = Math.ceil((end   - now) / 86400000);
-    const daysToStart= Math.ceil((start - now) / 86400000);
+    const end        = endOfDate(exam.date);
+    const start      = exam.start ? parseDateValue(exam.start) : parseDateValue(exam.date);
+    const daysToEnd  = calendarDayDiff(end, now);
+    const daysToStart= calendarDayDiff(start, now);
     const isActive   = now >= start && now <= end;  // 期間中
     const isPast     = now > end;                   // 終了
     const isUpcoming = !isPast && !isActive;        // 開始前
@@ -59,10 +60,11 @@ function renderExamAlerts(sem) {
     alerts.push({ label: exam.label, daysToEnd, daysToStart, isPast, isActive, isUpcoming });
   });
   if (sem.seiseki) {
-    const d = new Date(sem.seiseki);
-    const days = Math.ceil((d-now)/86400000);
+    const d = parseDateValue(sem.seiseki);
+    const days = calendarDayDiff(d, now);
     if (days>=-3 && days<=14) alerts.push({label:'成績発表', daysToEnd:days, isPast:days<0, isSeiseki:true});
   }
+  const alertHtml = [];
   alerts.forEach(({label, daysToEnd, daysToStart, isPast, isActive, isUpcoming, isSeiseki}) => {
     const icon = isSeiseki ? '📊' : '📝';
     let bg, bd, color, txt, sub;
@@ -85,15 +87,16 @@ function renderExamAlerts(sem) {
     if (isSeiseki) {
       bg='var(--bg3)'; bd='var(--border)';
       color=daysToEnd>=0?'var(--amber)':'var(--text3)';
-      txt=daysToEnd<0?`${Math.abs(daysToEnd)}日後`:`あと${daysToEnd}日`;
-      sub='';
+      txt=daysToEnd<0?`${Math.abs(daysToEnd)}日前`:daysToEnd===0?'今日発表':`あと${daysToEnd}日`;
+      sub=daysToEnd<0?'発表済み':'';
     }
-    el.innerHTML += `<div style="display:flex;align-items:center;gap:10px;padding:10px 12px;border-radius:8px;background:${bg};border:1px solid ${bd};margin-bottom:8px">
+    alertHtml.push(`<div style="display:flex;align-items:center;gap:10px;padding:10px 12px;border-radius:8px;background:${bg};border:1px solid ${bd};margin-bottom:8px">
       <span style="font-size:18px">${icon}</span>
       <div style="flex:1"><div style="font-size:13px;font-weight:700;color:${color}">${label}</div>
       <div style="font-size:11px;color:var(--text3)">${sub}</div></div>
-      <span style="font-size:11px;font-weight:700;color:${color};flex-shrink:0">${txt}</span></div>`;
+      <span style="font-size:11px;font-weight:700;color:${color};flex-shrink:0">${txt}</span></div>`);
   });
+  el.innerHTML = alertHtml.join('');
 }
 
 // ============================================================
@@ -102,29 +105,33 @@ function renderExamAlerts(sem) {
 function renderUpcoming(subjects, sem) {
   const el=document.getElementById('today-upcoming');
   if (!el) return;
-  if (!subjects.length) { el.innerHTML=''; return; }
-  const now=new Date(), twoW=new Date(now.getTime()+14*86400000);
+  if (!subjects.length) {
+    el.innerHTML='<div style="color:var(--text3);font-size:13px;text-align:center;padding:8px">科目を登録すると締切が表示されます</div>';
+    return;
+  }
+  const now=new Date();
   const items=[];
   subjects.forEach(s=>{
     const done=Math.floor(getCompletedLessons(s.code)/CPL);
     for (let n=1;n<=s.lessons;n++) {
       if (n<=done) continue;
       const dl=getLessonDeadline(n,s,sem);
-      if (dl>twoW) break;
-      items.push({s,n,dl,isLate:dl<now,days:Math.ceil((dl-now)/86400000)});
+      const days=calendarDayDiff(dl,now);
+      if (days>14) break;
+      items.push({s,n,dl,isLate:dl<now,days});
     }
   });
   let html='';
   if (sem.attendance?.senmon_jyunji?.[16]) {
     const e=sem.attendance.senmon_jyunji[16];
-    const dl=new Date(typeof e==='string'?e:e.end);
-    const days=Math.ceil((dl-now)/86400000);
-    if (days>-3&&days<=30) {
-      const isPast=days<0,bd=isPast?'var(--border)':days<=7?'var(--red)':'var(--amber)';
+    const dl=parseDateValue(typeof e==='string'?e:e.end);
+    const days=calendarDayDiff(dl,now);
+    if (days>=-3&&days<=30) {
+      const isPast=dl<now,bd=isPast?'var(--border)':days<=7?'var(--red)':'var(--amber)';
       const bg=isPast?'var(--bg3)':days<=7?'var(--red-dim)':'var(--amber-dim)';
       const tx=isPast?'var(--text3)':days<=7?'var(--red)':'var(--amber)';
       const dateStr=dl.toLocaleDateString('ja-JP',{month:'numeric',day:'numeric',weekday:'short'});
-      const lbl=isPast?`${Math.abs(days)}日前に終了`:days===0?'今日が締切！':`あと${days}日`;
+      const lbl=isPast?(days===0?'本日終了':`${Math.abs(days)}日前に終了`):days===0?'今日が締切！':`あと${days}日`;
       html+=`<div style="display:flex;align-items:center;gap:10px;padding:10px 12px;border-radius:8px;background:${bg};border:1px solid ${bd};margin-bottom:10px">
         <span style="font-size:18px">📝</span>
         <div style="flex:1"><div style="font-size:13px;font-weight:700;color:${tx}">期末試験（専門・順次開講）</div>

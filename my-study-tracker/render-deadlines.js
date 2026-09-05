@@ -4,12 +4,13 @@
 // ============================================================
 
 function showDeadlineModal(subjectCode, semId) {
-  const s = ALL_SUBJECTS.find(s => s.code === subjectCode);
+  const s = SUBJECT_BY_CODE.get(subjectCode);
   const sem = SEMESTERS.find(s => s.id === semId);
   if (!s || !sem) return;
 
   const doneChapters = getCompletedLessons(s.code);
   const done = Math.floor(doneChapters / 4); // コマ単位
+  const partialChapter = doneChapters % 4;
   const color = getCategoryColor(s.category);
   const now = new Date();
 
@@ -20,7 +21,7 @@ function showDeadlineModal(subjectCode, semId) {
     const available = isLessonAvailable(n, s, sem);
     const isDone = n <= done;
     const isLate = !isDone && deadline < now;
-    const isThisWeek = !isDone && !isLate && deadline <= new Date(now.getTime() + 7 * 86400000);
+    const isThisWeek = !isDone && !isLate && calendarDayDiff(deadline, now) <= 7;
     const isNotYet = !available;
 
     const dateStr = deadline.toLocaleDateString('ja-JP', { month: 'numeric', day: 'numeric', weekday: 'short' });
@@ -29,9 +30,9 @@ function showDeadlineModal(subjectCode, semId) {
     let rowStyle = '';
     let deadlineStyle = 'color:var(--text3)';
     if (isDone)          { statusIcon = '✅'; deadlineStyle = `color:${color}`; }
+    else if (isNotYet)   { statusIcon = '🔒'; deadlineStyle = 'color:var(--text3);opacity:0.4'; }
     else if (isLate)     { statusIcon = '🔴'; deadlineStyle = 'color:var(--red)'; rowStyle = 'background:var(--red-dim)'; }
     else if (isThisWeek) { statusIcon = '🟡'; deadlineStyle = 'color:var(--amber)'; rowStyle = 'background:var(--amber-dim)'; }
-    else if (isNotYet)   { statusIcon = '🔒'; deadlineStyle = 'color:var(--text3);opacity:0.4'; }
 
     rows += `
       <div style="display:flex;align-items:center;gap:10px;padding:8px 10px;border-radius:6px;${rowStyle}">
@@ -39,14 +40,19 @@ function showDeadlineModal(subjectCode, semId) {
         <span style="font-family:'Space Mono',monospace;font-size:12px;color:var(--text3);width:32px">コマ${n}</span>
         <span style="font-size:13px;${deadlineStyle};flex:1">〜 ${dateStr} 12:00</span>
         ${isDone ? `<span style="font-size:10px;color:${color}">完了</span>` : ''}
-        ${isLate ? `<span style="font-size:10px;color:var(--red)">遅刻中</span>` : ''}
-        ${isThisWeek ? `<span style="font-size:10px;color:var(--amber)">今週期限</span>` : ''}
+        ${isNotYet && !isDone ? '<span style="font-size:10px;color:var(--text3)">未開講</span>' : ''}
+        ${isLate && !isNotYet ? `<span style="font-size:10px;color:var(--red)">遅刻中</span>` : ''}
+        ${isThisWeek && !isNotYet ? `<span style="font-size:10px;color:var(--amber)">今週期限</span>` : ''}
       </div>`;
   }
 
   // モーダルHTML
+  document.getElementById('deadline-modal')?.remove();
   const modal = document.createElement('div');
   modal.id = 'deadline-modal';
+  modal.setAttribute('role', 'dialog');
+  modal.setAttribute('aria-modal', 'true');
+  modal.setAttribute('aria-label', `${s.name}の締切一覧`);
   modal.style.cssText = `
     position:fixed;inset:0;z-index:500;
     background:rgba(0,0,0,0.7);
@@ -63,9 +69,9 @@ function showDeadlineModal(subjectCode, semId) {
         <div>
           <div style="font-size:10px;font-family:'Space Mono',monospace;color:var(--amber);letter-spacing:2px;margin-bottom:4px">DEADLINES</div>
           <div style="font-size:15px;font-weight:700">${s.name}</div>
-          <div style="font-size:11px;color:var(--text3);margin-top:2px">${done}/${s.lessons}コマ完了（第${doneChapters % 4 || 4}章${doneChapters % 4 > 0 ? "途中" : ""}）</div>
+          <div style="font-size:11px;color:var(--text3);margin-top:2px">${done}/${s.lessons}コマ完了${partialChapter ? `（次のコマは第${partialChapter}章まで完了）` : ''}</div>
         </div>
-        <button onclick="document.getElementById('deadline-modal').remove()" style="
+        <button aria-label="閉じる" onclick="document.getElementById('deadline-modal').remove()" style="
           background:var(--bg3);border:none;color:var(--text2);
           width:32px;height:32px;border-radius:50%;font-size:18px;cursor:pointer;
         ">×</button>

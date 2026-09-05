@@ -26,12 +26,12 @@ const ALL_SUBJECTS = [
   { code: 'BA353',    name: '地域マーケティング論',                category: '専門', type: '専門応用', credits: 2, lessons: 15, deadline_type: '専門', available: ['春', '秋'], open_type: '順次', is_enshu: false },
   { code: 'BA354',    name: 'ビジネスモデル構築論',                category: '専門', type: '専門応用', credits: 2, lessons: 15, deadline_type: '専門', available: ['春', '秋'], open_type: '順次', is_enshu: false },
   { code: 'BA355',    name: 'プロダクトマネジメント',              category: '専門', type: '専門応用', credits: 2, lessons: 15, deadline_type: '専門', available: ['春', '秋'], open_type: '順次', is_enshu: false },
-  { code: 'BA356E', name: '生成AIメディア・クリエーション演習', category: '専門', deadline_type: '専門', open_type: '一斉', credits: 2, lessons: 15, term: '通期' },
+  { code: 'BA356E', name: '生成AIメディア・クリエーション演習', category: '専門', type: '専門応用', credits: 2, lessons: 15, deadline_type: '専門', available: ['春', '秋'], open_type: '一斉', term: '通期', is_enshu: true },
   { code: 'BA357E',   name: '生成AIによるビジネススキル演習',      category: '専門', type: '専門応用', credits: 2, lessons: 15, deadline_type: '専門', available: ['春', '秋'], open_type: '順次', is_enshu: true },
 
   // === 外国語科目（中国語）===
   { code: 'CHIN101E', name: '中国語入門A',   category: '外国語', type: '中国語', credits: 2, lessons: 15, deadline_type: '外国語', available: ['春', '秋'], open_type: '順次', term: '通期', is_enshu: true },
-  { code: 'CHIN103E', name: '中国語基礎Ⅰ', category: '外国語', deadline_type: '外国語', open_type: '一斉', credits: 2, lessons: 15, term: '通期' },
+  { code: 'CHIN103E', name: '中国語基礎Ⅰ', category: '外国語', type: '中国語', credits: 2, lessons: 15, deadline_type: '外国語', available: ['春', '秋'], open_type: '一斉', term: '通期', is_enshu: true },
   { code: 'CHIN202E', name: '中国語応用B',   category: '外国語', type: '中国語', credits: 2, lessons: 15, deadline_type: '外国語', available: ['春', '秋'], open_type: '順次', term: '通期', is_enshu: true },
 
   // === 専門科目 - 専門基礎 ===
@@ -91,7 +91,7 @@ const ALL_SUBJECTS = [
   { code: 'GEHM103',  name: '宗教学入門',                          category: '教養', type: '人文科学', credits: 1, lessons: 8, deadline_type: '教養', available: ['春', '秋'], open_type: '順次', term: '後期', is_enshu: false },
   { code: 'GEHM104',  name: '写真・映像制作の基礎',                category: '教養', type: '人文科学', credits: 1, lessons: 8, deadline_type: '教養', available: ['春', '秋'], open_type: '順次', term: '後期', is_enshu: false },
   { code: 'GEHM105',  name: '日本文学入門',                        category: '教養', type: '人文科学', credits: 1, lessons: 8, deadline_type: '教養', available: ['春', '秋'], open_type: '順次', term: '前期', is_enshu: false },
-  { code: 'GEHM107', name: '地理学入門', category: '教養', deadline_type: '教養', open_type: '一斉', credits: 2, lessons: 8, term: '前期' },
+  { code: 'GEHM107', name: '地理学入門', category: '教養', type: '人文科学', credits: 2, lessons: 8, deadline_type: '教養', available: ['春', '秋'], open_type: '一斉', term: '前期', is_enshu: false },
   { code: 'GEHM111',  name: '西洋音楽史',                          category: '教養', type: '人文科学', credits: 1, lessons: 8, deadline_type: '教養', available: ['春', '秋'], open_type: '順次', term: '後期', is_enshu: false },
   { code: 'GEHM112',  name: '西洋建築歴史の旅',                    category: '教養', type: '人文科学', credits: 1, lessons: 8, deadline_type: '教養', available: ['春', '秋'], open_type: '順次', term: '後期', is_enshu: false },
   { code: 'GEHM113',  name: '日本の心と異文化理解',                category: '教養', type: '人文科学', credits: 1, lessons: 8, deadline_type: '教養', available: ['春', '秋'], open_type: '順次', term: '後期', is_enshu: false },
@@ -112,7 +112,7 @@ const ALL_SUBJECTS = [
   { code: 'GENS113',  name: '地球科学入門',                        category: '教養', type: '自然科学', credits: 1, lessons: 8, deadline_type: '教養', available: ['春', '秋'], open_type: '順次', term: '前期', is_enshu: false },
   { code: 'GENS114',  name: '防災論入門',                          category: '教養', type: '自然科学', credits: 1, lessons: 8, deadline_type: '教養', available: ['春', '秋'], open_type: '順次', term: '後期', is_enshu: false },
   { code: 'GENS115',  name: '生物学入門',                          category: '教養', type: '自然科学', credits: 1, lessons: 8, deadline_type: '教養', available: ['春', '秋'], open_type: '順次', term: '後期', is_enshu: false },
-  { code: 'GENS116', name: '脳科学とテクノロジー', category: '教養', deadline_type: '教養', open_type: '一斉', credits: 2, lessons: 8, term: '前期' },
+  { code: 'GENS116', name: '脳科学とテクノロジー', category: '教養', type: '自然科学', credits: 2, lessons: 8, deadline_type: '教養', available: ['春', '秋'], open_type: '一斉', term: '前期', is_enshu: false },
   { code: 'GENS121',  name: '化学入門',                            category: '教養', type: '自然科学', credits: 1, lessons: 8, deadline_type: '教養', available: ['春', '秋'], open_type: '順次', term: '前期', is_enshu: false },
   { code: 'GENS122',  name: '医療・ヘルスケアとIT',                category: '教養', type: '自然科学', credits: 1, lessons: 8, deadline_type: '教養', available: ['春', '秋'], open_type: '順次', term: '後期', is_enshu: false },
   { code: 'GENS124',  name: '人工衛星入門',                        category: '教養', type: '自然科学', credits: 1, lessons: 8, deadline_type: '教養', available: ['春', '秋'], open_type: '順次', term: '後期', is_enshu: false },
@@ -123,7 +123,7 @@ const ALL_SUBJECTS = [
   { code: 'GESS102',  name: '地域おこし実践論',                    category: '教養', type: '社会科学', credits: 1, lessons: 8, deadline_type: '教養', available: ['春', '秋'], open_type: '順次', term: '後期', is_enshu: false },
   { code: 'GESS103',  name: 'ゲームの歴史と未来',                  category: '教養', type: '社会科学', credits: 1, lessons: 8, deadline_type: '教養', available: ['春', '秋'], open_type: '順次', term: '後期', is_enshu: false },
   { code: 'GESS104',  name: 'コンビニ経済学',                      category: '教養', type: '社会科学', credits: 1, lessons: 8, deadline_type: '教養', available: ['春', '秋'], open_type: '順次', term: '前期', is_enshu: false },
-  { code: 'GESS105', name: '行動経済学入門', category: '教養', deadline_type: '教養', open_type: '一斉', credits: 2, lessons: 8, term: '前期' },
+  { code: 'GESS105', name: '行動経済学入門', category: '教養', type: '社会科学', credits: 2, lessons: 8, deadline_type: '教養', available: ['春', '秋'], open_type: '一斉', term: '前期', is_enshu: false },
   { code: 'GESS111',  name: 'ソーシャルメディア概論',              category: '教養', type: '社会科学', credits: 1, lessons: 8, deadline_type: '教養', available: ['春', '秋'], open_type: '順次', term: '後期', is_enshu: false },
   { code: 'GESS112',  name: '政治学入門',                          category: '教養', type: '社会科学', credits: 1, lessons: 8, deadline_type: '教養', available: ['春', '秋'], open_type: '順次', term: '後期', is_enshu: false },
   { code: 'GESS113',  name: '社会保障入門',                        category: '教養', type: '社会科学', credits: 1, lessons: 8, deadline_type: '教養', available: ['春', '秋'], open_type: '順次', term: '後期', is_enshu: false },
@@ -165,6 +165,9 @@ const ALL_SUBJECTS = [
   { code: 'SD301E',   name: 'スタディスキル実践',                  category: '教養', type: 'キャリアデザイン', credits: 1, lessons: 8, deadline_type: '教養', available: ['春', '秋'], open_type: '順次', term: '前期', is_enshu: true, required: true },
   { code: 'SD302E',   name: 'アカデミックライティング',            category: '教養', type: 'キャリアデザイン', credits: 1, lessons: 8, deadline_type: '教養', available: ['春', '秋'], open_type: '順次', term: '通期', is_enshu: true },
 ];
+
+// 頻繁な科目コード検索を定数時間にする参照マップ。
+const SUBJECT_BY_CODE = new Map(ALL_SUBJECTS.map(subject => [subject.code, subject]));
 
 // --- オープンバッジ定義 ---
 const BADGES = [

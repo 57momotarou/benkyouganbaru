@@ -4,7 +4,7 @@
 // ============================================================
 
 // mode: 'overdue'=遅刻中 / 'today'=今週やるべき / 'tomorrow'=先取り推奨
-function _renderTodayCard(ttEl, item, sem, semId, mode) {
+function buildTodayCard(item, sem, semId, mode) {
   const { s, doneLes, rec, late, nextLesson } = item;
   const color = getCategoryColor(s.category);
   const pct   = Math.round(doneLes / s.lessons * 100);
@@ -36,6 +36,7 @@ function _renderTodayCard(ttEl, item, sem, semId, mode) {
     const isNotYet  = !isLessonAvailable(lesson, s, sem);
     const noClick   = isNotYet ? 'pointer-events:none;' : '';
     const opacity   = isNotYet ? 'opacity:0.25;' : '';
+    const disabled  = isNotYet ? ' disabled aria-disabled="true"' : '';
 
     let btnStyle = '';
     if (isDone)        btnStyle = `background:${color};color:#000;border-color:${color}`;
@@ -43,11 +44,11 @@ function _renderTodayCard(ttEl, item, sem, semId, mode) {
     else if (isTarget) btnStyle = 'background:var(--amber-dim);color:var(--amber);border:1px solid var(--amber)';
     else               btnStyle = 'background:var(--bg3);color:var(--text3);border:1px solid var(--border)';
 
-    btnHtml += `<button class="lesson-btn${isDone?' done':''}" onclick="toggleLesson('${s.code}',${lesson},${semId})" style="width:36px;height:36px;font-size:11px;${btnStyle}${noClick}${opacity}" title="コマ${lesson}">${lesson}</button>`;
+    btnHtml += `<button class="lesson-btn${isDone?' done':''}" onclick="toggleLesson('${s.code}',${lesson},${semId})" style="width:36px;height:36px;font-size:11px;${btnStyle}${noClick}${opacity}" title="コマ${lesson}" aria-label="${s.name} コマ${lesson}"${disabled}>${lesson}</button>`;
   }
   btnHtml += '</div></div>';
 
-  ttEl.innerHTML += `
+  return `
     <div class="today-subject-card" style="border-left:3px solid ${color};margin-bottom:8px">
       <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:8px;margin-bottom:8px">
         <div style="display:flex;align-items:center;gap:8px;flex:1;min-width:0">

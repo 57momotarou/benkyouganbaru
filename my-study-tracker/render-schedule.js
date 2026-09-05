@@ -16,7 +16,7 @@ function renderSchedulePage() {
 function getKimatsuDate(sem) {
   if (sem.attendance?.senmon_jyunji?.[16]) {
     const e=sem.attendance.senmon_jyunji[16];
-    return new Date(typeof e==='string'?e:e.end);
+    return parseDateValue(typeof e==='string'?e:e.end);
   }
   return null;
 }
@@ -89,7 +89,7 @@ function renderMonthSchedule(subjects, sem, semId) {
       kimatsu:isKimatsu,
     }));
 
-    html+=`<div onclick="${hasContent?`showDayDetail('${tapData}')`:''}"
+    html+=`<div ${hasContent?`data-day-detail="${tapData}" role="button" tabindex="0" aria-label="${month+1}月${day}日の予定を表示"`:''}
       style="min-height:44px;border-radius:4px;padding:2px 3px;overflow:hidden;
         background:${isToday?'var(--amber-dim)':isKimatsu?'var(--purple-dim)':hasContent?'var(--bg3)':'transparent'};
         border:1px solid ${isToday?'var(--amber)':isKimatsu?'var(--purple)':hasContent?'var(--border)':'transparent'};
@@ -112,17 +112,35 @@ function renderMonthSchedule(subjects, sem, semId) {
     <span style="margin-left:auto">タップで詳細</span>
   </div>`;
   el.innerHTML=html;
+
+  el.querySelectorAll('[data-day-detail]').forEach(cell => {
+    const openDetail = () => showDayDetail(cell.dataset.dayDetail);
+    cell.addEventListener('click', openDetail);
+    cell.addEventListener('keydown', event => {
+      if (event.key !== 'Enter' && event.key !== ' ') return;
+      event.preventDefault();
+      openDetail();
+    });
+  });
 }
 
 // ============================================================
 // 日付タップ詳細モーダル
 // ============================================================
 function showDayDetail(dataJson) {
-  const data=JSON.parse(decodeURIComponent(dataJson));
+  let data;
+  try { data=JSON.parse(decodeURIComponent(dataJson)); }
+  catch (error) {
+    console.warn('予定の詳細を開けませんでした。', error);
+    return;
+  }
   const existing=document.getElementById('day-detail-modal');
   if (existing) existing.remove();
   const modal=document.createElement('div');
   modal.id='day-detail-modal';
+  modal.setAttribute('role','dialog');
+  modal.setAttribute('aria-modal','true');
+  modal.setAttribute('aria-label',`${data.date}の予定`);
   modal.style.cssText='position:fixed;inset:0;z-index:500;background:rgba(0,0,0,0.7);display:flex;align-items:flex-end;padding-bottom:env(safe-area-inset-bottom)';
 
   let content='';
@@ -143,7 +161,7 @@ function showDayDetail(dataJson) {
         <div style="font-size:10px;font-family:'Space Mono',monospace;color:var(--amber);letter-spacing:2px">SCHEDULE</div>
         <div style="font-size:15px;font-weight:700;margin-top:2px">${data.date}</div>
       </div>
-      <button onclick="document.getElementById('day-detail-modal').remove()" style="background:var(--bg3);border:none;color:var(--text2);width:32px;height:32px;border-radius:50%;font-size:18px;cursor:pointer">×</button>
+      <button aria-label="閉じる" onclick="document.getElementById('day-detail-modal').remove()" style="background:var(--bg3);border:none;color:var(--text2);width:32px;height:32px;border-radius:50%;font-size:18px;cursor:pointer">×</button>
     </div>
     ${content||'<div style="color:var(--text3);font-size:13px;text-align:center;padding:16px">この日の予定はありません</div>'}
   </div>`;

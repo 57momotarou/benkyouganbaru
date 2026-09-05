@@ -33,9 +33,9 @@ function renderTodayTimetable(subjects, sem, semId) {
 
     const nextDeadline = !allDone && nextLesson <= s.lessons
       ? getLessonDeadline(nextLesson, s, sem).getTime()
-      : new Date('2099-01-01').getTime();
+      : new Date(2099, 0, 1).getTime();
 
-    const daysToNext = Math.ceil((nextDeadline - now.getTime()) / 86400000);
+    const daysToNext = calendarDayDiff(nextDeadline, now);
 
     return { s, doneCh, doneLes, rec, late, allDone, nextLesson, nextDeadline, daysToNext };
   });
@@ -56,11 +56,12 @@ function renderTodayTimetable(subjects, sem, semId) {
 
   if (lateList.length > 0) {
     const total = lateList.length;
-    ttEl.innerHTML += `<div style="font-size:11px;color:var(--text3);margin-bottom:8px">🔴 遅刻中（締切が近い順）全${total}科目</div>`;
-    _renderTodayCard(ttEl, lateList[0], sem, semId, 'overdue');
+    let html = `<div style="font-size:11px;color:var(--text3);margin-bottom:8px">🔴 遅刻中（締切が近い順）全${total}科目</div>`;
+    html += buildTodayCard(lateList[0], sem, semId, 'overdue');
     if (total > 1) {
-      ttEl.innerHTML += `<div style="font-size:12px;color:var(--red);font-weight:700;padding:10px 12px;background:var(--red-dim);border:1px solid var(--red);border-radius:8px;text-align:center">🔴 あと ${total - 1} 科目も遅刻中です</div>`;
+      html += `<div style="font-size:12px;color:var(--red);font-weight:700;padding:10px 12px;background:var(--red-dim);border:1px solid var(--red);border-radius:8px;text-align:center">🔴 あと ${total - 1} 科目も遅刻中です</div>`;
     }
+    ttEl.innerHTML = html;
     return;
   }
 
@@ -70,7 +71,7 @@ function renderTodayTimetable(subjects, sem, semId) {
     .sort((a, b) => a.nextDeadline - b.nextDeadline);
 
   if (urgentList.length > 0) {
-    urgentList.forEach(item => _renderTodayCard(ttEl, item, sem, semId, 'today'));
+    ttEl.innerHTML = urgentList.map(item => buildTodayCard(item, sem, semId, 'today')).join('');
     return;
   }
 
@@ -81,8 +82,8 @@ function renderTodayTimetable(subjects, sem, semId) {
     .slice(0, 2);
 
   if (advanceList.length > 0) {
-    ttEl.innerHTML += `<div style="font-size:11px;color:var(--text3);margin-bottom:8px">✨ 先取り推奨（締切まで余裕あり）</div>`;
-    advanceList.forEach(item => _renderTodayCard(ttEl, item, sem, semId, 'tomorrow'));
+    ttEl.innerHTML = `<div style="font-size:11px;color:var(--text3);margin-bottom:8px">✨ 先取り推奨（締切まで余裕あり）</div>`
+      + advanceList.map(item => buildTodayCard(item, sem, semId, 'tomorrow')).join('');
     return;
   }
 

@@ -3,6 +3,32 @@
 // 出席認定期限の計算ロジック
 // ============================================================
 
+// YYYY-MM-DD を UTC ではなく利用端末のローカル日付として扱う。
+// JavaScript 標準の new Date('YYYY-MM-DD') は UTC 解釈のため、地域によって日付がずれる。
+function parseDateValue(value) {
+  if (value instanceof Date) return new Date(value.getTime());
+  if (typeof value === 'string') {
+    const match = /^(\d{4})-(\d{2})-(\d{2})$/.exec(value);
+    if (match) return new Date(Number(match[1]), Number(match[2]) - 1, Number(match[3]));
+  }
+  return new Date(value);
+}
+
+function endOfDate(value) {
+  const date = parseDateValue(value);
+  date.setHours(23, 59, 59, 999);
+  return date;
+}
+
+// 時刻の差ではなくカレンダー上の日付差を返す（今日=0、明日=1、昨日=-1）。
+function calendarDayDiff(target, origin = new Date()) {
+  const targetDate = parseDateValue(target);
+  const originDate = parseDateValue(origin);
+  const targetDay = new Date(targetDate.getFullYear(), targetDate.getMonth(), targetDate.getDate());
+  const originDay = new Date(originDate.getFullYear(), originDate.getMonth(), originDate.getDate());
+  return Math.round((targetDay - originDay) / 86400000);
+}
+
 // 科目と学期から該当する出席認定テーブルキーを返す
 function getAttendanceKey(subject, semester) {
   if (!semester.attendance) return null;
@@ -31,11 +57,11 @@ function getLessonDeadline(lessonNum, subject, semester) {
     const entry = semester.attendance[key][lessonNum];
     if (entry) {
       const dateStr = typeof entry === 'string' ? entry : entry.end;
-      return new Date(dateStr);
+      return parseDateValue(dateStr);
     }
   }
   // テーブルがない学期（秋学期以降）は計算式でフォールバック
-  const start = new Date(semester.start);
+  const start = parseDateValue(semester.start);
   const deadlineDow = subject.deadline_type === '専門' ? 4 : 2;
   const daysToFirst = (deadlineDow - start.getDay() + 7) % 7;
   const first = new Date(start);
@@ -57,11 +83,11 @@ function isLessonAvailable(lessonNum, subject, semester) {
     if (entry) {
       // 順次開講：startがあればそれで判定（コマ1含む全コマ）
       if (typeof entry === 'object' && entry.start) {
-        return new Date(entry.start) <= new Date();
+        return parseDateValue(entry.start) <= new Date();
       }
       // 教養後期（一斉開講・5/26から）：全コマ5/26以降で開講
       if (key === 'kyoyo_koki') {
-        return new Date(KYOYO_KOKI_START) <= new Date();
+        return parseDateValue(KYOYO_KOKI_START) <= new Date();
       }
       // senmon_issai, kyoyo_zenki, gaikokugo, study_skill等:
       // 学期開始と同時に一斉開講
@@ -70,7 +96,7 @@ function isLessonAvailable(lessonNum, subject, semester) {
   }
   // テーブルなし（秋学期以降）は学期開始日で判定
   if (semester.start) {
-    return new Date(semester.start) <= new Date();
+    return parseDateValue(semester.start) <= new Date();
   }
   return true;
 }

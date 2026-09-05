@@ -5,16 +5,29 @@
 function renderBadgesPage() {
   var allCodes = new Set();
   SEMESTERS.forEach(function(sem){ getEnrolledCodes(sem.id).forEach(function(c){ allCodes.add(c); }); });
+  var badgeById = new Map(BADGES.map(function(badge){ return [badge.id, badge]; }));
+  var earnedCache = new Map();
 
-  function isEarned(badge) {
+  function isEarned(badge, visiting) {
     if (!badge || !badge.requirements) return false;
+    if (earnedCache.has(badge.id)) return earnedCache.get(badge.id);
+    visiting = visiting || new Set();
+    if (visiting.has(badge.id)) return false;
+    visiting.add(badge.id);
     var req = badge.requirements;
     if (req.prerequisite) {
-      var pre = BADGES.find(function(b){ return b.id===req.prerequisite; });
-      if (pre && !isEarned(pre)) return false;
+      var pre = badgeById.get(req.prerequisite);
+      if (!pre || !isEarned(pre, visiting)) {
+        visiting.delete(badge.id);
+        earnedCache.set(badge.id, false);
+        return false;
+      }
     }
-    if (!req.codes || !req.codes.length) return false;
-    return req.codes.every(function(c){ return allCodes.has(c); });
+    var result = Boolean(req.codes && req.codes.length)
+      && req.codes.every(function(c){ return allCodes.has(c); });
+    visiting.delete(badge.id);
+    earnedCache.set(badge.id, result);
+    return result;
   }
   function getProg(badge) {
     if (!badge) return {done:0,total:0};
@@ -22,7 +35,7 @@ function renderBadgesPage() {
     if (!req || !req.codes || !req.codes.length) return {done:0,total:0};
     return { done: req.codes.filter(function(c){ return allCodes.has(c); }).length, total: req.codes.length };
   }
-  function getBadge(id){ return BADGES.find(function(b){ return b.id===id; }); }
+  function getBadge(id){ return badgeById.get(id); }
 
   var LCFG   = BADGE_LEVEL_CONFIG;
   var earned = BADGES.filter(function(b){ return isEarned(b); });
@@ -108,12 +121,15 @@ function showBadgeModal(badgeId) {
 
   var modal = document.createElement('div');
   modal.id = 'badge-modal';
+  modal.setAttribute('role', 'dialog');
+  modal.setAttribute('aria-modal', 'true');
+  modal.setAttribute('aria-label', badge.name);
   modal.style.cssText = 'position:fixed;inset:0;z-index:500;background:rgba(0,0,0,0.7);display:flex;align-items:flex-end;padding-bottom:env(safe-area-inset-bottom)';
 
   var subjectRows = '';
   if (codes.length > 0) {
     codes.forEach(function(code) {
-      var s = ALL_SUBJECTS.find(function(x){ return x.code===code; });
+      var s = SUBJECT_BY_CODE.get(code);
       var isEnrolled = allCodes.has(code);
       var name = s ? s.name : code;
       var credits = s ? s.credits+'単位' : '';
@@ -148,7 +164,7 @@ function showBadgeModal(badgeId) {
     + '<div style="font-size:18px;font-weight:700">'+badge.name+'</div>'
     + '<div style="font-size:12px;color:var(--text3);margin-top:4px">'+doneCount+' / '+codes.length+' 科目履修済み（'+pct+'%）</div>'
     + '</div>'
-    + '<button onclick="document.getElementById(\'badge-modal\').remove()" style="background:var(--bg3);border:none;color:var(--text2);width:32px;height:32px;border-radius:50%;font-size:18px;cursor:pointer;flex-shrink:0">×</button>'
+    + '<button aria-label="閉じる" onclick="document.getElementById(\'badge-modal\').remove()" style="background:var(--bg3);border:none;color:var(--text2);width:32px;height:32px;border-radius:50%;font-size:18px;cursor:pointer;flex-shrink:0">×</button>'
     + '</div>'
     + (codes.length > 0 ? '<div class="prog-wrap" style="margin-bottom:16px"><div class="prog-bar" style="width:'+pct+'%;background:'+lcfg.color+'"></div></div>' : '')
     + preHtml

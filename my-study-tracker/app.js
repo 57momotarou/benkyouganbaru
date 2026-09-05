@@ -2,7 +2,12 @@
 // my-study-tracker - app.js
 // ============================================================
 
-const KEYS = { enrollments:'cp-enrollments', progress:'cp-progress', currentSem:'cp-current-sem' };
+const KEYS = {
+  enrollments: 'cp-enrollments',
+  progress: 'cp-progress',
+  currentSem: 'cp-current-sem',
+  migrated: 'cp-migrated-v1',
+};
 
 let state = { currentSemesterId:1, enrollments:{}, progress:{}, activeSubjectFilter:'all' };
 
@@ -11,41 +16,137 @@ document.addEventListener('DOMContentLoaded', () => {
 });
 
 function loadState() {
-  try {
-    state.enrollments = JSON.parse(localStorage.getItem(KEYS.enrollments)||'{}');
-    state.progress    = JSON.parse(localStorage.getItem(KEYS.progress)||'{}');
-    const c = localStorage.getItem(KEYS.currentSem);
-    state.currentSemesterId = c ? parseInt(c) : 1;
-    // 旧データ（コマ単位）→章単位への移行（一度だけ実行）
-    const migratedKey = 'cp-migrated-v1';
-    if (!localStorage.getItem(migratedKey)) {
-      let migrated = false;
-      Object.keys(state.progress).forEach(code => {
-        if (state.progress[code] > 0 && state.progress[code] <= 15) {
-          state.progress[code] *= 4; migrated = true;
-        }
-      });
-      if (migrated) saveState();
-      localStorage.setItem(migratedKey, '1');
-    }
-  } catch(e) { console.error(e); }
+  const rawEnrollments = readStoredJson(KEYS.enrollments, {});
+  const rawProgress = readStoredJson(KEYS.progress, {});
+  const progress = rawProgress && typeof rawProgress === 'object' && !Array.isArray(rawProgress)
+    ? { ...rawProgress }
+    : {};
+
+  // 旧データ（コマ単位）→章単位への移行（一度だけ実行）
+  const needsMigration = !readStoredValue(KEYS.migrated);
+  if (needsMigration) {
+    Object.keys(progress).forEach(code => {
+      const value = Number(progress[code]);
+      if (Number.isFinite(value) && value > 0 && value <= 15) progress[code] = value * 4;
+    });
+  }
+
+  state.enrollments = normalizeEnrollments(rawEnrollments);
+  state.progress = normalizeProgress(progress);
+
+  const storedSemesterId = Number.parseInt(readStoredValue(KEYS.currentSem), 10);
+  state.currentSemesterId = SEMESTERS.some(sem => sem.id === storedSemesterId)
+    ? storedSemesterId
+    : getDefaultSemesterId();
+
+  // 移行後の値を先に保存し、成功した場合だけ完了マーカーを付ける。
+  if (needsMigration && saveState()) writeStoredValue(KEYS.migrated, '1');
 }
+
+function readStoredValue(key) {
+  try { return localStorage.getItem(key); }
+  catch (error) {
+    console.warn('保存データを読み込めませんでした。', error);
+    return null;
+  }
+}
+
+function writeStoredValue(key, value) {
+  try {
+    localStorage.setItem(key, value);
+    return true;
+  } catch (error) {
+    console.warn('保存データを書き込めませんでした。', error);
+    return false;
+  }
+}
+
+function readStoredJson(key, fallback) {
+  const raw = readStoredValue(key);
+  if (raw === null) return fallback;
+  try { return JSON.parse(raw); }
+  catch (error) {
+    console.warn('保存データの形式が壊れているため初期値を使用します。', error);
+    return fallback;
+  }
+}
+
+function normalizeEnrollments(value) {
+  if (!value || typeof value !== 'object' || Array.isArray(value)) return {};
+  const normalized = {};
+  SEMESTERS.forEach(sem => {
+    const codes = value[sem.id];
+    if (!Array.isArray(codes)) return;
+    normalized[sem.id] = [...new Set(codes.filter(code => typeof code === 'string' && SUBJECT_BY_CODE.has(code)))];
+  });
+  return normalized;
+}
+
+function normalizeProgress(value) {
+  if (!value || typeof value !== 'object' || Array.isArray(value)) return {};
+  const normalized = {};
+  Object.entries(value).forEach(([code, rawValue]) => {
+    const subject = SUBJECT_BY_CODE.get(code);
+    const numericValue = Number(rawValue);
+    if (!subject || !Number.isFinite(numericValue)) return;
+    const clampedValue = Math.min(subject.lessons * 4, Math.max(0, Math.trunc(numericValue)));
+    if (clampedValue > 0) normalized[code] = clampedValue;
+  });
+  return normalized;
+}
+
+function getDefaultSemesterId() {
+  const now = new Date();
+  const active = SEMESTERS.find(sem => parseDateValue(sem.start) <= now && now <= endOfDate(sem.end));
+  if (active) return active.id;
+  const started = SEMESTERS.filter(sem => parseDateValue(sem.start) <= now);
+  return (started[started.length - 1] || SEMESTERS[0]).id;
+}
+
 function saveState() {
-  localStorage.setItem(KEYS.enrollments, JSON.stringify(state.enrollments));
-  localStorage.setItem(KEYS.progress,    JSON.stringify(state.progress));
-  localStorage.setItem(KEYS.currentSem,  String(state.currentSemesterId));
+  const saved = [
+    writeStoredValue(KEYS.enrollments, JSON.stringify(state.enrollments)),
+    writeStoredValue(KEYS.progress, JSON.stringify(state.progress)),
+    writeStoredValue(KEYS.currentSem, String(state.currentSemesterId)),
+  ].every(Boolean);
+  if (!saved) showStorageWarning();
+  return saved;
+}
+
+let storageWarningTimer = null;
+function showStorageWarning() {
+  if (!document.body) return;
+  let warning = document.getElementById('storage-warning');
+  if (!warning) {
+    warning = document.createElement('div');
+    warning.id = 'storage-warning';
+    warning.setAttribute('role', 'alert');
+    warning.style.cssText = 'position:fixed;left:16px;right:16px;bottom:calc(var(--nav-h) + env(safe-area-inset-bottom) + 12px);z-index:700;max-width:568px;margin:auto;padding:10px 12px;border:1px solid var(--red);border-radius:8px;background:var(--red-dim);color:#fca5a5;font-size:12px;text-align:center;box-shadow:0 8px 24px rgba(0,0,0,.35)';
+    warning.textContent = '端末に保存できませんでした。ブラウザの保存設定と空き容量を確認してください。';
+    document.body.appendChild(warning);
+  }
+  clearTimeout(storageWarningTimer);
+  storageWarningTimer = setTimeout(() => warning.remove(), 5000);
 }
 
 function registerSW() {
-  if (!('serviceWorker' in navigator)) return;
-  navigator.serviceWorker.register('./sw.js').then(reg => {
-    reg.addEventListener('updatefound', () => {
-      const w = reg.installing;
-      w.addEventListener('statechange', () => { if (w.state==='activated') location.reload(); });
-    });
+  if (!('serviceWorker' in navigator) || location.protocol === 'file:') return;
+  const hadController = Boolean(navigator.serviceWorker.controller);
+  let refreshing = false;
+
+  navigator.serviceWorker.addEventListener('controllerchange', () => {
+    if (!hadController || refreshing) return;
+    refreshing = true;
+    location.reload();
   });
-  navigator.serviceWorker.ready.then(r => r.update());
-  navigator.serviceWorker.addEventListener('message', e => { if (e.data==='RELOAD') location.reload(); });
+
+  navigator.serviceWorker.register('./sw.js')
+    .then(registration => registration.update().catch(error => {
+      console.warn('更新確認に失敗しました。', error);
+    }))
+    .catch(error => {
+      console.warn('オフライン機能を登録できませんでした。', error);
+    });
 }
 
 // ============================================================
@@ -53,37 +154,50 @@ function registerSW() {
 // ============================================================
 function setupNav() {
   document.getElementById('header-settings-btn').addEventListener('click', () => {
-    document.querySelectorAll('.nav-btn').forEach(b=>b.classList.remove('active'));
-    document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
-    document.getElementById('page-settings').classList.add('active');
-    renderSettingsPage();
+    activatePage('settings');
   });
   document.getElementById('header-sem-trigger').addEventListener('click', e => {
     e.stopPropagation(); toggleSemDrawer();
   });
   document.querySelectorAll('.nav-btn').forEach(btn => {
     btn.addEventListener('click', () => {
-      const t = btn.dataset.page;
-      document.querySelectorAll('.nav-btn').forEach(b=>b.classList.remove('active'));
-      document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
-      btn.classList.add('active');
-      document.getElementById(`page-${t}`).classList.add('active');
-      if (t==='today')    renderToday();
-      if (t==='schedule') renderSchedulePage();
-      if (t==='settings') renderSettingsPage();
-      if (t==='badges')   renderBadgesPage();
-      if (t==='progress') renderProgressPage();
+      activatePage(btn.dataset.page, btn);
+    });
+  });
+
+  document.addEventListener('keydown', event => {
+    if (event.key !== 'Escape') return;
+    closeSemDrawer();
+    ['deadline-modal', 'day-detail-modal', 'badge-modal'].forEach(id => {
+      document.getElementById(id)?.remove();
     });
   });
 }
 
 function render() {
   renderHeader();
-  renderToday();
-  renderSchedulePage();
-  renderSettingsPage();
-  renderBadgesPage();
-  renderProgressPage();
+  renderActivePage();
+}
+
+function activatePage(pageName, navButton = null) {
+  const page = document.getElementById(`page-${pageName}`);
+  if (!page) return;
+  closeSemDrawer();
+  document.querySelectorAll('.nav-btn').forEach(button => button.classList.remove('active'));
+  document.querySelectorAll('.page').forEach(item => item.classList.remove('active'));
+  if (navButton) navButton.classList.add('active');
+  page.classList.add('active');
+  renderActivePage();
+}
+
+function renderActivePage() {
+  const activePage = document.querySelector('.page.active');
+  if (!activePage) return;
+  if (activePage.id === 'page-today') renderToday();
+  else if (activePage.id === 'page-schedule') renderSchedulePage();
+  else if (activePage.id === 'page-settings') renderSettingsPage();
+  else if (activePage.id === 'page-badges') renderBadgesPage();
+  else if (activePage.id === 'page-progress') renderProgressPage();
 }
 
 // ============================================================
@@ -111,15 +225,7 @@ function toggleSemDrawer() {
       e.stopPropagation();
       state.currentSemesterId = sem.id;
       saveState(); closeSemDrawer(); renderHeader();
-      const activePage = document.querySelector('.page.active');
-      if (activePage) {
-        const id = activePage.id;
-        if (id==='page-today')    renderToday();
-        if (id==='page-progress') renderProgressPage();
-        if (id==='page-schedule') renderSchedulePage();
-        if (id==='page-badges')   renderBadgesPage();
-        if (id==='page-settings') renderSettingsPage();
-      }
+      renderActivePage();
     });
     listEl.appendChild(btn);
   });
@@ -136,7 +242,7 @@ function closeSemDrawer() {
 // ============================================================
 function getCurrentSemester() { return SEMESTERS.find(s=>s.id===state.currentSemesterId)||SEMESTERS[0]; }
 function getEnrolledCodes(semId)   { return state.enrollments[semId]||[]; }
-function getEnrolledSubjects(semId){ return getEnrolledCodes(semId).map(c=>ALL_SUBJECTS.find(s=>s.code===c)).filter(Boolean); }
+function getEnrolledSubjects(semId){ return getEnrolledCodes(semId).map(code=>SUBJECT_BY_CODE.get(code)).filter(Boolean); }
 function getCompletedLessons(code) { return state.progress[code]||0; }
 function getCategoryColor(cat)     { return (CATEGORY_CONFIG[cat]||{}).color||'#64748b'; }
 function renderHeader()            { document.getElementById('header-semester').textContent = getCurrentSemester().name; }
@@ -164,11 +270,10 @@ function toggleLesson(code, lessonNum, semId) {
     return;
   }
 
+  if (state.progress[code] <= 0) delete state.progress[code];
+
   saveState();
-  renderProgressPage();
-  _updateTodayAfterToggle();
-  renderBadgesPage();
-  if (document.getElementById('page-schedule').classList.contains('active')) renderSchedulePage();
+  rerenderAfterProgressChange();
 }
 
 function toggleChapter(code, chapterNum, semId) {
@@ -176,11 +281,15 @@ function toggleChapter(code, chapterNum, semId) {
   if      (chapterNum === current + 1) state.progress[code] = chapterNum;
   else if (chapterNum === current)     state.progress[code] = chapterNum - 1;
   else return;
+  if (state.progress[code] <= 0) delete state.progress[code];
   saveState();
-  renderProgressPage();
-  _updateTodayAfterToggle();
-  renderBadgesPage();
-  if (document.getElementById('page-schedule').classList.contains('active')) renderSchedulePage();
+  rerenderAfterProgressChange();
+}
+
+function rerenderAfterProgressChange() {
+  const activePage = document.querySelector('.page.active');
+  if (activePage?.id === 'page-today') _updateTodayAfterToggle();
+  else renderActivePage();
 }
 
 // TODAYタブ更新（点滅防止 + 数字ズレ防止）

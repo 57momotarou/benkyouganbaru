@@ -27,13 +27,14 @@
   --header-h: 54px;
 }
 
-html { background: var(--bg); }
+html { background: var(--bg); color-scheme: dark; }
 
 body {
   font-family: 'Noto Sans JP', sans-serif;
   background: var(--bg);
   color: var(--text);
   min-height: 100vh;
+  min-height: 100dvh;
   padding-bottom: calc(var(--nav-h) + env(safe-area-inset-bottom));
   padding-top: calc(var(--header-h) + env(safe-area-inset-top));
   -webkit-font-smoothing: antialiased;
@@ -278,7 +279,7 @@ body {
 /* ── 学期タブ（ヘッダー直下に固定） ── */
 .semester-tabs {
   position: sticky;
-  top: 0;
+  top: calc(var(--header-h) + env(safe-area-inset-top));
   z-index: 150;
   display: flex;
   gap: 6px;
@@ -549,6 +550,7 @@ body {
   -webkit-tap-highlight-color: transparent;
 }
 .lesson-btn.done { color: #000; }
+.lesson-btn:disabled { cursor: not-allowed; }
 .lesson-btn.today-target {
   box-shadow: 0 0 0 2px var(--amber);
 }
@@ -607,6 +609,21 @@ body {
 /* ── タップハイライト除去 ── */
 .lesson-btn,.today-subject-card,.progress-subject-card,.week-cell {
   -webkit-tap-highlight-color:transparent;
+}
+
+button:focus-visible,
+[role="button"]:focus-visible {
+  outline: 2px solid var(--amber);
+  outline-offset: 2px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    scroll-behavior: auto !important;
+    transition-duration: 0.01ms !important;
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+  }
 }
 
 /* ── 週ストリップパネル ── */

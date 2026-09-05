@@ -1,0 +1,6 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" role="img" aria-label="my-study-tracker">
+  <rect width="512" height="512" rx="112" fill="#0a0e1a"/>
+  <rect x="104" y="92" width="304" height="328" rx="48" fill="#111827" stroke="#f59e0b" stroke-width="20"/>
+  <path d="M166 178h180M166 248h112M166 318h72" fill="none" stroke="#94a3b8" stroke-width="24" stroke-linecap="round"/>
+  <path d="m276 313 34 34 72-86" fill="none" stroke="#10b981" stroke-width="28" stroke-linecap="round" stroke-linejoin="round"/>
+</svg>
