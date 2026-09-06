@@ -1,5 +1,5 @@
 const CACHE_PREFIX = 'my-study-tracker-';
-const CACHE = `${CACHE_PREFIX}v61`;
+const CACHE = `${CACHE_PREFIX}v64`;
 const APP_SHELL = [
   './',
   './index.html',
@@ -8,8 +8,10 @@ const APP_SHELL = [
   './data.js',
   './manifest.json',
   './icon.svg',
+  './icon-180.png',
   './icon-192.png',
   './icon-512.png',
+  './icon-512-maskable.png',
   './attendance.js',
   './render-today.js',
   './render-today-timetable.js',
