@@ -579,6 +579,79 @@ body {
   letter-spacing: 0.5px;
 }
 
+/* ── データの引き継ぎ ── */
+.data-transfer-description {
+  color: var(--text2);
+  font-size: 12px;
+  line-height: 1.7;
+  margin-bottom: 14px;
+}
+
+.data-transfer-actions {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.data-transfer-btn {
+  min-height: 42px;
+  padding: 10px 12px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  background: var(--bg3);
+  color: var(--text);
+  font-family: 'Noto Sans JP', sans-serif;
+  font-size: 12px;
+  font-weight: 700;
+  cursor: pointer;
+  touch-action: manipulation;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.data-transfer-btn.primary {
+  border-color: var(--blue);
+  background: rgba(59,130,246,0.14);
+  color: #93c5fd;
+}
+
+.data-transfer-btn:active { transform: translateY(1px); }
+.data-transfer-btn:disabled { cursor: wait; opacity: 0.65; }
+
+.data-transfer-note {
+  margin-top: 10px;
+  color: var(--text3);
+  font-size: 10px;
+  line-height: 1.6;
+}
+
+.data-transfer-status {
+  display: none;
+  margin-top: 10px;
+  padding: 8px 10px;
+  border: 1px solid var(--border);
+  border-radius: 7px;
+  font-size: 11px;
+  line-height: 1.5;
+}
+
+.data-transfer-status.success {
+  display: block;
+  border-color: var(--green);
+  background: var(--green-dim);
+  color: #6ee7b7;
+}
+
+.data-transfer-status.error {
+  display: block;
+  border-color: var(--red);
+  background: var(--red-dim);
+  color: #fca5a5;
+}
+
+@media (max-width: 390px) {
+  .data-transfer-actions { grid-template-columns: 1fr; }
+}
+
 
 
 /* ── 今日タブ：科目カード ── */

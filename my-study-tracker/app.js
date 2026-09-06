@@ -12,7 +12,7 @@ const KEYS = {
 let state = { currentSemesterId:1, enrollments:{}, progress:{}, activeSubjectFilter:'all' };
 
 document.addEventListener('DOMContentLoaded', () => {
-  loadState(); setupNav(); render(); registerSW();
+  loadState(); setupNav(); setupDataTransfer(); render(); registerSW();
 });
 
 function loadState() {

@@ -123,6 +123,18 @@
         <div id="enrolled-list"></div>
         <div id="enrolled-stats" class="enrolled-stats"></div>
       </div>
+      <div class="card" id="data-transfer-card">
+        <div class="card-label">DATA</div>
+        <div class="card-title">データの引き継ぎ</div>
+        <p class="data-transfer-description">履修科目・学習進捗・選択中の学期を、バックアップファイルで別端末や更新版へ移せます。</p>
+        <div class="data-transfer-actions">
+          <button type="button" class="data-transfer-btn primary" id="data-export-btn">バックアップを保存</button>
+          <button type="button" class="data-transfer-btn" id="data-import-btn">バックアップを復元</button>
+          <input type="file" id="data-import-input" accept="application/json,.json" hidden>
+        </div>
+        <div class="data-transfer-note">復元すると、現在この端末にある履修・進捗データがバックアップの内容に置き換わります。</div>
+        <div id="data-transfer-status" class="data-transfer-status" role="status" aria-live="polite"></div>
+      </div>
     </div>
 
   </main>
@@ -156,6 +168,7 @@
   <script src="./render-badges.js"></script>
   <script src="./render-progress.js"></script>
   <script src="./render-deadlines.js"></script>
+  <script src="./data-transfer.js"></script>
   <script src="./app.js"></script>
 </body>
 </html>

@@ -1,5 +1,5 @@
 const CACHE_PREFIX = 'my-study-tracker-';
-const CACHE = `${CACHE_PREFIX}v64`;
+const CACHE = `${CACHE_PREFIX}v65`;
 const APP_SHELL = [
   './',
   './index.html',
@@ -21,6 +21,7 @@ const APP_SHELL = [
   './render-badges.js',
   './render-progress.js',
   './render-deadlines.js',
+  './data-transfer.js',
 ];
 
 self.addEventListener('install', event => {
